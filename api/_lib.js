@@ -132,18 +132,24 @@ export async function caller(req, tokenOverride = '') {
 
 // ---------- PMS owners: which owner does an email belong to ----------
 // An owner's contact details sit in owners/{id}/private/contact (and private/main for older ones): email, and coOwners [{ fullName, email }].
+// Every person with an email on an owner: the contact part AND the full part (they can differ when one was edited later), plus co-owners of either.
+function peopleOf(c = {}, m = {}) {
+  const out = [], add = (name, email) => { const e = lower(email); if (e && !out.some(x => x.email === e)) out.push({ name: name || '', email: e }); };
+  add(c.fullName || m.fullName, c.email); add(m.fullName || c.fullName, m.email);
+  for (const list of [c.coOwners, m.coOwners]) for (const x of Array.isArray(list) ? list : []) add(x?.fullName, x?.email);
+  return out;
+}
 const ownerCache = { at: 0, list: null };
 async function ownerContacts() {
-  if (ownerCache.list && Date.now() - ownerCache.at < 600000) return ownerCache.list;
+  if (ownerCache.list && Date.now() - ownerCache.at < 60000) return ownerCache.list;
   const k = pms();
   const owners = await listIds(k, 'owners');
   const paths = owners.flatMap(o => [`owners/${o.id}/private/contact`, `owners/${o.id}/private/main`]);
   const docs = await batchGet(k, paths);
   const list = owners.map(o => {
     const c = docs[`owners/${o.id}/private/contact`] || {}, m = docs[`owners/${o.id}/private/main`] || {};
-    const people = [{ name: c.fullName || m.fullName || '', email: lower(c.email || m.email) },
-      ...((Array.isArray(c.coOwners) && c.coOwners.length ? c.coOwners : m.coOwners) || []).map(x => ({ name: x?.fullName || '', email: lower(x?.email) }))];
-    return { id: o.id, active: o.active !== false, people: people.filter(p => p.email) };
+    const people = peopleOf(c, m);
+    return { id: o.id, active: o.active !== false, people };
   });
   Object.assign(ownerCache, { at: Date.now(), list });
   return list;
@@ -172,8 +178,7 @@ export async function ownerOf(user) {
     const d = await batchGet(k, [`owners/${link.ownerId}`, `owners/${link.ownerId}/private/contact`, `owners/${link.ownerId}/private/main`]);
     const o = d[`owners/${link.ownerId}`], c = d[`owners/${link.ownerId}/private/contact`] || {}, m = d[`owners/${link.ownerId}/private/main`] || {};
     if (o && o.active !== false) {
-      const people = [{ name: c.fullName || m.fullName || '', email: lower(c.email || m.email) },
-        ...((Array.isArray(c.coOwners) && c.coOwners.length ? c.coOwners : m.coOwners) || []).map(x => ({ name: x?.fullName || '', email: lower(x?.email) }))];
+      const people = peopleOf(c, m);
       const p = people.find(x => x.email === user.email);
       if (p) found = { ownerId: link.ownerId, name: p.name };
     }
