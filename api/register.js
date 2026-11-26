@@ -11,7 +11,8 @@ export default async function handler(req, res) {
     const b = typeof req.body === 'string' ? JSON.parse(req.body || '{}') : req.body || {};
     const email = lower(b.email), password = String(b.password || '');
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) throw new HttpError(400, 'Type a valid email address.');
-    if (password.length < 8 || password.length > 128) throw new HttpError(400, 'The password needs at least 8 characters.');
+    if (password.length > 128 || password.length < 8 || !/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password))   // KEEP IN STEP with PW_RULES in src/lib/format.js
+      throw new HttpError(400, 'The password needs 8 or more characters with a capital letter, a small letter, a number and a symbol.');
     if (!(await matchEmail(email))) throw new HttpError(403, 'This email is not registered as an owner with Widebed. Please contact us, or use the email address Widebed has for you.');
     const apiKey = process.env.PORTAL_FIREBASE_API_KEY;
     if (!apiKey) throw new HttpError(500, 'PORTAL_FIREBASE_API_KEY is not set on the server.');
@@ -21,7 +22,7 @@ export default async function handler(req, res) {
     if (!r.ok) {
       const code = j.error?.message || '';
       if (code.startsWith('EMAIL_EXISTS')) throw new HttpError(409, 'This email already has an account. Please sign in (or use Forgot password).');
-      if (code.startsWith('WEAK_PASSWORD')) throw new HttpError(400, 'Choose a stronger password (at least 8 characters).');
+      if (code.startsWith('WEAK_PASSWORD')) throw new HttpError(400, 'Choose a stronger password.');
       throw new HttpError(502, 'Could not create the account. Please try again.');
     }
     send(res, 200, { ok: true });

@@ -6,11 +6,11 @@
     <div v-if="!configured" class="bar offline">This site is not connected to its Firebase project yet (VITE_FIREBASE_* settings are missing).</div>
     <template v-if="inApp">
       <header class="top">
-        <img src="/favicon.svg" alt="" class="logo" />
+        <img src="/logo.png" alt="" class="logo" />
         <div class="ttl">{{ $route.meta.title }}</div>
         <div class="brand desk">Widebed Owner</div>
         <nav class="topnav">
-          <router-link v-for="t in tabs" :key="t.to" :to="t.to">{{ t.label }}</router-link>
+          <router-link v-for="t in tabs" :key="t.to" :to="t.to" :title="t.label"><span class="ico" v-html="t.icon"></span><span>{{ t.label }}</span></router-link>
         </nav>
       </header>
       <main class="page"><router-view /></main>
@@ -40,7 +40,7 @@ export default {
   },
   computed: {
     ready() { return session.ready; },
-    inApp() { return !!session.user && session.verified; }
+    inApp() { return !!session.user && session.verified && !this.$route.meta.gate; }
   },
   mounted() {
     window.addEventListener('online', () => (this.online = true));

@@ -1,12 +1,12 @@
 <template>
   <div>
-    <div class="brand-head"><img src="/favicon.svg" alt="" /><h1>Widebed Owner Portal</h1><p class="sub">Sign in to see your units, stays and payments.</p></div>
+    <div class="brand-head"><img src="/logo.png" alt="" /><h1>Widebed Owner Portal</h1><p class="sub">Sign in to see your units, stays and payments.</p></div>
     <form class="card" @submit.prevent="submit" novalidate>
       <template v-if="!forgot">
         <label for="em">Email</label>
         <input id="em" v-model.trim="email" type="email" autocomplete="username" inputmode="email" />
         <label for="pw">Password</label>
-        <input id="pw" v-model="password" type="password" autocomplete="current-password" />
+        <input id="pw" v-model="password" type="password" autocomplete="current-password" placeholder="Enter your password" />
         <div v-if="error" class="err">{{ error }}</div>
         <button class="btn block" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</button>
         <p class="hint center"><button type="button" class="link-btn" @click="forgot = true; error = ''">Forgot password?</button></p>

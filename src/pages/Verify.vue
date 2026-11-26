@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="brand-head"><img src="/favicon.svg" alt="" /><h1>Check your email</h1></div>
+    <div class="brand-head"><img src="/logo.png" alt="" /><h1>Check your email</h1></div>
     <div class="card">
       <p style="margin-top:0">We sent a link to <b>{{ email }}</b>. Open it to confirm this is your email, then come back here.</p>
       <button class="btn block" :disabled="busy" @click="check">I've confirmed my email</button>

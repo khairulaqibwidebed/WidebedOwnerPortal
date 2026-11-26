@@ -1,6 +1,6 @@
 // Checks the server functions with a pretend PMS and a pretend portal database (no network, test data only).
 // The point: an owner only ever gets their own units, stays, paid statements and visible tickets.
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import { generateKeyPairSync } from 'node:crypto';
 
 const { privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048, privateKeyEncoding: { type: 'pkcs8', format: 'pem' }, publicKeyEncoding: { type: 'spki', format: 'pem' } });
@@ -121,6 +121,14 @@ describe('an owner sees only their own data', () => {
     const ok = await call('tok-A', 'statement', { id: 'uA1_2026-09' }); expect(ok.status).toBe(200); expect(ok.data.pdf.lines[0].amount).toBe(100);
     for (const id of ['uA1_2026-10', 'uB1_2026-09', 'uA1_2026-01', 'nope']) expect((await call('tok-A', 'statement', { id })).status).toBe(404);
   });
+  it('terms: not agreed at first, then recorded and shown', async () => {
+    const first = (await call('tok-A', 'terms')).data.terms;
+    expect(first.accepted).toBe(false);
+    const done = (await call('tok-A', 'acceptTerms')).data.terms;
+    expect(done.accepted).toBe(true); expect(done.acceptedAt).toMatch(/^\d{4}-\d\d-\d\dT/);
+    expect((await call('tok-A', 'terms')).data.terms.accepted).toBe(true);
+    expect((await call('tok-B', 'terms')).data.terms.accepted).toBe(false);   // another owner is asked separately
+  });
   it('tickets: status only, not hidden ones, not other units, not in-house', async () => {
     const t = (await call('tok-A', 'tickets')).data.tickets;
     expect(t.map(x => x.id)).toEqual(['i1']); expect(t[0]).toMatchObject({ status: 'In progress', title: 'Leaking tap' });
@@ -134,21 +142,34 @@ describe('an owner sees only their own data', () => {
     expect((await call('tok-B', 'statement', { id: 'uA1_2026-09' })).status).toBe(404);
     expect((await call('tok-B', 'tickets')).data.tickets.map(x => x.id)).toEqual(['i3']);
   });
+  it('one unit page: only that unit, and never a unit of another owner', async () => {
+    expect((await call('tok-A', 'stays', { unitId: 'uA1' })).data.stays.every(x => x.unit === 'T-01')).toBe(true);
+    expect((await call('tok-A', 'payments', { unitId: 'uA1' })).data.payments.map(x => x.id)).toEqual(['uA1_2026-09']);
+    expect((await call('tok-A', 'tickets', { unitId: 'uA1' })).data.tickets.map(x => x.id)).toEqual(['i1']);
+    for (const a of ['stays', 'payments', 'tickets']) expect((await call('tok-A', a, { unitId: 'uB1' })).status).toBe(404);
+  });
   it('unknown actions and wrong methods are refused', async () => { expect((await call('tok-A', 'dump')).status).toBe(400); expect((await call('tok-A', 'overview', {}, 'GET')).status).toBe(405); });
+  it('overview says whether each unit is occupied today', async () => {
+    store['pms-test']['offlineBookings/b9'] = { unitId: 'uA1', arrival: day(-1), departure: day(2), nights: 3, status: 'confirmed' };
+    const real = Date.now, later = real() + 120000;   // past the 30 second server memory
+    vi.spyOn(Date, 'now').mockImplementation(() => later);
+    try { expect((await call('tok-A', 'overview')).data.units[0].occupied).toBe(true); } finally { vi.restoreAllMocks(); }
+  });
 });
 
 describe('register', () => {
   const reg = async body => { let status = 0, data; await register({ method: 'POST', headers: {}, body }, { status(c) { status = c; return this; }, json(d) { data = d; } }); return { status, data }; };
   it('creates an account only for a PMS owner email (or co-owner)', async () => {
-    expect((await reg({ email: 'Owner.A@example.com', password: 'longenough1' })).status).toBe(200);
-    expect((await reg({ email: 'co.a@example.com', password: 'longenough1' })).status).toBe(200);
-    expect((await reg({ email: 'stranger@example.com', password: 'longenough1' })).status).toBe(403);   // owner switched off
-    expect((await reg({ email: 'nobody@example.com', password: 'longenough1' })).status).toBe(403);
+    expect((await reg({ email: 'Owner.A@example.com', password: 'Longenough1!' })).status).toBe(200);
+    expect((await reg({ email: 'co.a@example.com', password: 'Longenough1!' })).status).toBe(200);
+    expect((await reg({ email: 'stranger@example.com', password: 'Longenough1!' })).status).toBe(403);   // owner switched off
+    expect((await reg({ email: 'nobody@example.com', password: 'Longenough1!' })).status).toBe(403);
   });
   it('checks the email and password shape; an existing account is told to sign in', async () => {
-    expect((await reg({ email: 'bad', password: 'longenough1' })).status).toBe(400);
+    expect((await reg({ email: 'bad', password: 'Longenough1!' })).status).toBe(400);
     expect((await reg({ email: 'owner.b@example.com', password: 'short' })).status).toBe(400);
-    expect((await reg({ email: 'owner.b@example.com', password: 'longenough1' })).status).toBe(200);
-    expect((await reg({ email: 'owner.b@example.com', password: 'longenough1' })).status).toBe(409);
+    for (const weak of ['longenough1!', 'LONGENOUGH1!', 'Longenough!!', 'Longenough11']) expect((await reg({ email: 'owner.b@example.com', password: weak })).status).toBe(400);
+    expect((await reg({ email: 'owner.b@example.com', password: 'Longenough1!' })).status).toBe(200);
+    expect((await reg({ email: 'owner.b@example.com', password: 'Longenough1!' })).status).toBe(409);
   });
 });

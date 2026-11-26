@@ -1,7 +1,7 @@
 <template>
   <div v-if="items.length" class="vw" role="dialog" aria-modal="true" @click.self="$emit('close')" @keydown.esc="$emit('close')" tabindex="-1" ref="box">
     <div class="vw-top">
-      <div class="vw-name">{{ cur.name }}<span v-if="items.length > 1"> · {{ i + 1 }} of {{ items.length }}</span></div>
+      <div class="vw-name">{{ cur.name }}<span v-if="items.length > 1"> · {{ i + 1 }} of {{ items.length }}</span><small v-if="cur.at">{{ dateTime(cur.at) }}</small></div>
       <a class="vw-btn" :href="cur.url" :download="cur.name" target="_blank" rel="noopener">Download</a>
       <button class="vw-btn" @click="$emit('close')">Close</button>
     </div>
@@ -17,10 +17,11 @@
 
 <script>
 // Opens photos, videos and PDFs on top of the same page (no new tab). items: [{ name, mimeType, url }]
+import { dateTime } from '@/lib/format.js';
 export default {
   props: { items: { type: Array, default: () => [] }, start: { type: Number, default: 0 } },
   emits: ['close'],
-  data() { return { i: this.start }; },
+  data() { return { i: this.start, dateTime }; },
   computed: {
     cur() { return this.items[this.i] || this.items[0]; },
     kind() { const t = this.cur?.mimeType || ''; return t.startsWith('video/') ? 'video' : t === 'application/pdf' ? 'pdf' : 'image'; }
