@@ -6,7 +6,7 @@
         <label for="em">Email</label>
         <input id="em" v-model.trim="email" type="email" autocomplete="username" inputmode="email" />
         <label for="pw">Password</label>
-        <input id="pw" v-model="password" type="password" autocomplete="current-password" placeholder="Enter your password" />
+        <PasswordInput id="pw" v-model="password" autocomplete="current-password" placeholder="Enter your password" />
         <div v-if="error" class="err">{{ error }}</div>
         <button class="btn block" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</button>
         <p class="hint center"><button type="button" class="link-btn" @click="forgot = true; error = ''">Forgot password?</button></p>
@@ -29,8 +29,10 @@ import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/aut
 import { auth } from '@/firebase.js';
 import { friendlyAuthError } from '@/lib/format.js';
 import { guardAttempt } from '@/lib/login-guard.js';
+import PasswordInput from '@/components/PasswordInput.vue';
 
 export default {
+  components: { PasswordInput },
   data() { return { email: '', password: '', busy: false, error: '', forgot: false, sent: false }; },
   methods: {
     async submit() {
