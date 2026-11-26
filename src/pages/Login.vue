@@ -28,6 +28,7 @@
 import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '@/firebase.js';
 import { friendlyAuthError } from '@/lib/format.js';
+import { guardAttempt } from '@/lib/login-guard.js';
 
 export default {
   data() { return { email: '', password: '', busy: false, error: '', forgot: false, sent: false }; },
@@ -39,6 +40,13 @@ export default {
       try {
         if (this.forgot) { await sendPasswordResetEmail(auth, this.email).catch(e => { if (e.code !== 'auth/user-not-found') throw e; }); this.sent = true; return; }
         if (!this.password) return (this.error = 'Type your password.');
+        // 26 Nov 2026: the server checks the password first and counts wrong ones (api/login-guard.js)
+        const g = await guardAttempt(this.email, this.password);
+        if (g.ok === false) {
+          this.error = g.code === 'auth/invalid-credential' && g.left > 0 && g.left <= 3
+            ? `${g.error} ${g.left} ${g.left === 1 ? 'try' : 'tries'} left before sign-in is locked for 15 minutes.` : g.error;
+          return;
+        }
         await signInWithEmailAndPassword(auth, this.email, this.password);
         this.$router.replace('/units');
       } catch (e) { this.error = friendlyAuthError(e); }
