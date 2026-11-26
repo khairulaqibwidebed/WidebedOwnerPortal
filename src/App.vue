@@ -1,5 +1,5 @@
 <template>
-  <div v-if="!ready" class="boot">Loading…</div>
+  <div v-if="!ready" class="boot" aria-busy="true"><div class="card sk-card"><div class="sk sk-title"></div><div class="sk sk-sub"></div><div class="sk-row"><div class="sk sk-l"></div><div class="sk sk-r"></div></div></div></div>
   <template v-else>
     <div v-if="!online" class="bar offline">You're offline. Pages you already opened may be out of date.</div>
     <div v-if="update" class="bar update">A new version is ready. <button class="link-btn" @click="reload">Reload</button></div>
@@ -8,6 +8,7 @@
       <header class="top">
         <img src="/favicon.svg" alt="" class="logo" />
         <div class="ttl">{{ $route.meta.title }}</div>
+        <div class="brand desk">Widebed Owner</div>
         <nav class="topnav">
           <router-link v-for="t in tabs" :key="t.to" :to="t.to">{{ t.label }}</router-link>
         </nav>

@@ -1,5 +1,8 @@
 <template>
-  <Loader :loading="loading" :error="error" @retry="load">
+  <div>
+  <h1 class="page-h">Profile</h1>
+  <p class="page-sub">Your account details.</p>
+  <Loader :loading="loading" :error="error" :count="2" :rows="2" @retry="load">
     <div class="card">
       <div class="row"><span>Name</span><span>{{ profile.name || '—' }}</span></div>
       <div class="row"><span>Email</span><span>{{ profile.email }}</span></div>
@@ -15,6 +18,7 @@
     </form>
     <button class="btn ghost block" @click="out">Sign out</button>
   </Loader>
+  </div>
 </template>
 <script>
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut } from 'firebase/auth';

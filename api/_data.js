@@ -28,7 +28,7 @@ export function fileLines(rec) {
 const cache = new Map();
 export async function load(owner) {
   const hit = cache.get(owner.ownerId);
-  if (hit && Date.now() - hit.at < 300000) return hit.v;
+  if (hit && Date.now() - hit.at < 30000) return hit.v;
   const k = pms();
   const units = (await query(k, 'units', [['ownerId', 'EQUAL', owner.ownerId]])).filter(u => u.active !== false && u.unitCode);
   const props = await batchGet(k, [...new Set(units.map(u => u.propertyId).filter(Boolean))].map(id => `properties/${id}`));

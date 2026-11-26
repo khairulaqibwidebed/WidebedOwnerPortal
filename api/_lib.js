@@ -170,7 +170,7 @@ const ctxCache = new Map();
 export async function ownerOf(user) {
   if (!user.verified) throw new HttpError(403, 'Please verify your email first. Check your inbox for the Widebed link.');
   const hit = ctxCache.get(user.uid);
-  if (hit && Date.now() - hit.at < 300000 && hit.email === user.email) return hit.value;
+  if (hit && Date.now() - hit.at < 60000 && hit.email === user.email) return hit.value;
   const link = await getDoc(portal(), `ownerLinks/${user.uid}`);
   let found = null;
   if (link?.ownerId && lower(link.email) === user.email) {

@@ -12,7 +12,7 @@ It reads the PMS only through its server functions (`api/`), with a service acco
 - The browser never talks to the PMS. `/api/portal` checks the owner's portal login, requires a VERIFIED email, finds the PMS owner by that email (re-checked every time), and returns only that owner's units.
 - The portal's own Firestore refuses every browser request (`firestore.rules`). Only the server writes `ownerLinks/{uid}`.
 - No guest names, no booking amounts, no costs, no bank details leave the server. Tickets marked "Hide from owner" in the PMS never reach the portal.
-- A switched-off owner, or an owner whose contact email changes, loses access within 5 minutes.
+- A switched-off owner, or an owner whose contact email changes, loses access within a minute.
 
 ## Steps for Khairul (one thing at a time)
 
@@ -60,7 +60,7 @@ npm test
 `tests/rules.test.js` needs the Firestore emulator (firebase-tools): `firebase emulators:exec --only firestore --project demo-owner-portal "npm run test:rules"`.
 
 ## Limits to know
-- Reads from the PMS count against the PMS Firestore free limit (50,000 reads a day). Each owner's data is kept 5 minutes on the server, so a page open costs a few dozen reads at most.
+- Reads from the PMS count against the PMS Firestore free limit (50,000 reads a day). Each owner data is kept 30 seconds on the server, so a page open costs a few dozen reads at most.
 - Stays show the last 14 months and the next 3 months.
 - Fixed rent units: their payment row shows, but there is no statement PDF (Finance's fixed rent summary is per property).
 - Videos are streamed through the server. Very large videos depend on Vercel's streaming limits and need a real test.

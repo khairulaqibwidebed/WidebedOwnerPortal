@@ -25,7 +25,7 @@ export default async function handler(req, res) {
     const meta = await fileMeta(tok, f);
     if (!folder || !(meta.parents || []).includes(folder)) throw new HttpError(404, 'Not found.');
     if (kind === 'ticket' && !/^(image|video)\//.test(meta.mimeType)) throw new HttpError(404, 'Not found.');
-    const r = await dg(`${DRIVE_API}/files/${f}?alt=media&supportsAllDrives=true`, tok, { headers: req.headers.range ? { Range: req.headers.range } : {} });
+    const r = await dg(`${DRIVE_API}/files/${f}?alt=media&supportsAllDrives=true`, tok, { headers: { 'Accept-Encoding': 'identity', ...(req.headers.range ? { Range: req.headers.range } : {}) } });
     res.status(r.status);
     res.setHeader('Content-Type', meta.mimeType || 'application/octet-stream');
     res.setHeader('Content-Disposition', `inline; filename*=UTF-8''${encodeURIComponent(meta.name || 'file')}`);

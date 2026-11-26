@@ -1,16 +1,25 @@
 <template>
-  <Loader :loading="loading" :error="error" @retry="load">
-    <div class="seg"><button :class="{ on: tab === 'up' }" @click="tab = 'up'">Upcoming ({{ upcoming.length }})</button><button :class="{ on: tab === 'past' }" @click="tab = 'past'">Past ({{ past.length }})</button></div>
-    <p class="sub">Dates only. Showing the last 14 months and the next 3 months.</p>
-    <div v-if="!list.length" class="empty">Nothing to show here.</div>
-    <div v-for="(s, i) in list" :key="i" class="card">
-      <div class="title">{{ s.unit }} <span class="sub" style="font-weight:400">· {{ s.property }}</span></div>
-      <div class="row"><span>Check-in</span><span>{{ dmy(s.arrival) }}</span></div>
-      <div class="row"><span>Check-out</span><span>{{ dmy(s.departure) }}</span></div>
-      <div class="row"><span>Nights</span><span>{{ s.nights }}</span></div>
-      <span v-if="s.arrival <= today && s.departure >= today" class="chip green">Staying now</span>
-    </div>
-  </Loader>
+  <div>
+    <h1 class="page-h">Check-ins and check-outs</h1>
+    <p class="page-sub">Dates only. Showing the last 14 months and the next 3 months.</p>
+    <Loader :loading="loading" :error="error" @retry="load">
+      <div class="seg"><button :class="{ on: tab === 'up' }" @click="tab = 'up'">Upcoming ({{ upcoming.length }})</button><button :class="{ on: tab === 'past' }" @click="tab = 'past'">Past ({{ past.length }})</button></div>
+      <div v-if="!list.length" class="empty">Nothing to show here.</div>
+      <div class="grid">
+        <div v-for="(s, i) in list" :key="i" class="card stripe" :class="{ green: now(s) }">
+          <div class="card-h">
+            <div class="title">{{ s.unit }} <span class="sub" style="font-weight:400">· {{ s.property }}</span></div>
+            <span v-if="now(s)" class="chip green">Staying now</span>
+          </div>
+          <div class="dates">
+            <div class="d"><small>Check-in</small><b>{{ dmy(s.arrival) }}</b></div>
+            <div class="n">{{ s.nights }} {{ s.nights === 1 ? 'night' : 'nights' }}</div>
+            <div class="d"><small>Check-out</small><b>{{ dmy(s.departure) }}</b></div>
+          </div>
+        </div>
+      </div>
+    </Loader>
+  </div>
 </template>
 <script>
 import Loader from '@/components/Loader.vue';
@@ -25,6 +34,6 @@ export default {
     list() { return this.tab === 'up' ? this.upcoming : this.past; }
   },
   mounted() { this.load(); },
-  methods: { async load() { this.loading = true; this.error = ''; try { const r = await call('stays'); this.stays = r.stays; this.today = r.today; } catch (e) { this.error = e.message; } finally { this.loading = false; } } }
+  methods: { now(s) { return s.arrival <= this.today && s.departure >= this.today; }, async load() { this.loading = true; this.error = ''; try { const r = await call('stays'); this.stays = r.stays; this.today = r.today; } catch (e) { this.error = e.message; } finally { this.loading = false; } } }
 };
 </script>
