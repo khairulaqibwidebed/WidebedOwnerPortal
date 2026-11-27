@@ -11,7 +11,7 @@
         <h2>Job stages</h2>
         <div class="card">
           <div class="tl" :class="{ fin: t.status === 'Completed' }">
-            <div v-for="(s, i) in STAGES" :key="s" class="tl-i" :class="{ done: i < cur, now: i === cur && t.status !== 'Cancelled', off: t.status === 'Cancelled' }">
+            <div v-for="(s, i) in STAGES" :key="s" class="tl-i" :class="{ done: i < cur, now: i === cur && t.status !== 'Cancelled', off: t.status === 'Cancelled' }" :style="{ '--k': i }">
               <span class="dot"></span>
               <div><b>{{ s }}</b><small v-if="i === 0 && t.date">{{ dmy(t.date) }}</small><small v-else-if="i === cur && t.status === 'Completed'">Job finished</small><small v-else-if="i === cur && t.status !== 'Cancelled'">Current stage</small></div>
             </div>
@@ -35,7 +35,7 @@
         <template v-else><h2>Photos and videos</h2><div class="empty" style="padding:14px">No photos or videos uploaded yet.</div></template>
       </div>
     </Loader>
-    <Viewer v-if="view" :items="view.items" :start="view.start" @close="view = null" />
+    <Transition name="sheet"><Viewer v-if="view" :items="view.items" :start="view.start" @close="view = null" /></Transition>
   </div>
 </template>
 <script>

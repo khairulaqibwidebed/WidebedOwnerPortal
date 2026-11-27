@@ -72,11 +72,11 @@ beforeEach(() => {
     'units/uA1': { ownerId: 'oA', propertyId: 'p1', unitCode: 'T-01', active: true, info: { bedrooms: 2, jmb: 'private-ish' } },
     'units/uB1': { ownerId: 'oB', propertyId: 'p1', unitCode: 'T-02', active: true, info: {} },
     'units/uA1/ownership/x1': { ownerId: 'oA', from: '2026-03-01' },
-    'offlineBookings/b1': { unitId: 'uA1', arrival: day(10), departure: day(40), nights: 30, status: 'confirmed', ezeeReservationNo: 'R1' },
+    'offlineBookings/b1': { unitId: 'uA1', arrival: day(10), departure: day(40), nights: 30, status: 'confirmed', ezeeReservationNo: 'R1', monthlyRent: 2000, rental: 0, securityDeposit: 4000, guestName: 'NO' },
     'offlineBookings/b2': { unitId: 'uB1', arrival: day(10), departure: day(12), status: 'confirmed' },
     'offlineBookings/b3': { unitId: 'uA1', arrival: day(5), departure: day(7), status: 'cancelled' },
     'bookings/R1': { unitId: 'uA1', reservationNo: 'R1', arrival: day(10), departure: day(40), status: 'active', departureMonth: day(40).slice(0, 7) },
-    'bookings/R2': { unitId: 'uA1', reservationNo: 'R2', arrival: day(-20), departure: day(-18), nights: 2, status: 'active', departureMonth: day(-18).slice(0, 7), guestName: 'NO' },
+    'bookings/R2': { unitId: 'uA1', reservationNo: 'R2', arrival: day(-20), departure: day(-18), nights: 2, status: 'active', departureMonth: day(-18).slice(0, 7), guestName: 'NO', allRoomCharges: 300, commission: 55, sst: 24, edits: { allRoomCharges: 320 } },
     'bookings/R3': { unitId: 'uA1', reservationNo: 'R3', arrival: '2026-01-05', departure: '2026-01-07', status: 'active', departureMonth: '2026-01' },
     'bookings/R4': { unitId: 'uB1', reservationNo: 'R4', arrival: day(-3), departure: day(-1), status: 'active', departureMonth: day(-1).slice(0, 7) },
     'statements/uA1_2026-09': { unitId: 'uA1', unitCode: 'T-01', month: '2026-09', status: 'completed', paymentStatus: 'paid', paidAmount: 100, paidDate: '2026-10-05', paidRef: 'REF1', arrangementLabel: 'Profit share', rates: { serviceFeePct: 0.4 }, totals: { payout: 100 }, lines: [{ source: 'Airbnb', arrival: '2026-09-01', departure: '2026-09-03', nights: 2, pto: 100 }] },
@@ -110,8 +110,10 @@ describe('an owner sees only their own data', () => {
   it('stays: dates and nights only, no cancelled, no duplicates of an eZee-keyed booking, nothing before ownership, nothing of others', async () => {
     const s = (await call('tok-A', 'stays')).data.stays;
     expect(s.map(x => x.arrival)).toEqual([day(10), day(-20)]);   // R1 is the eZee copy of offline b1: shown once
-    expect(Object.keys(s[0]).sort()).toEqual(['arrival', 'departure', 'nights', 'property', 'source', 'unit']);
-    expect(JSON.stringify(s)).not.toMatch(/guestName|NO|T-02/);
+    expect(Object.keys(s[0]).sort()).toEqual(['arrival', 'departure', 'grossPer', 'grossRental', 'nights', 'property', 'source', 'unit']);
+    expect(s[0]).toMatchObject({ grossRental: 2000, grossPer: 'month' });   // Widebed long stay: monthly rent, deposit never shown
+    expect(s[1]).toMatchObject({ grossRental: 320, grossPer: 'stay' });     // eZee: room charges (saved edit wins), no commission or SST
+    expect(JSON.stringify(s)).not.toMatch(/guestName|NO|T-02|4000|"commission"|"sst"/);
   });
   it('payments: paid only, from ownership start, own units only', async () => {
     const p = (await call('tok-A', 'payments')).data.payments;
@@ -171,5 +173,46 @@ describe('register', () => {
     for (const weak of ['longenough1!', 'LONGENOUGH1!', 'Longenough!!', 'Longenough11']) expect((await reg({ email: 'owner.b@example.com', password: weak })).status).toBe(400);
     expect((await reg({ email: 'owner.b@example.com', password: 'Longenough1!' })).status).toBe(200);
     expect((await reg({ email: 'owner.b@example.com', password: 'Longenough1!' })).status).toBe(409);
+  });
+});
+
+describe('owner booking requests', () => {
+  const P = () => store['pms-test'];
+  const mine = () => Object.entries(P()).filter(([p]) => p.startsWith('ownerBookingRequests/'));
+  it('an owner asks to book their own unit: saved as pending, categorised Owner Booking, staff notified', async () => {
+    const r = await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(50), departure: day(53), note: 'Family visit' });
+    expect(r.status).toBe(200); expect(r.data.request).toMatchObject({ unit: 'T-01', status: 'pending', nights: 3, note: 'Family visit' });
+    const [[, rec]] = mine();
+    expect(rec).toMatchObject({ ownerId: 'oA', unitId: 'uA1', status: 'pending', category: 'Owner Booking', arrival: day(50), departure: day(53), createdVia: 'owner-portal' });
+    const notes = Object.entries(P()).filter(([p]) => p.startsWith('notifications/')).map(([, n]) => n);
+    expect(notes.map(n => n.recipientRole).sort()).toEqual(['director', 'operations']);
+    expect(notes[0]).toMatchObject({ type: 'ownerBooking', link: '/Portfolio/bookings', title: 'Owner booking request' });
+    expect((await call('tok-A', 'bookingRequests')).data.requests.map(x => x.arrival)).toEqual([day(50)]);
+  });
+  it('refused: someone else\'s unit, past dates, bad dates, a clash with a booking, a clash with their own request', async () => {
+    expect((await call('tok-A', 'requestBooking', { unitId: 'uB1', arrival: day(50), departure: day(53) })).status).toBe(404);
+    expect((await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(-3), departure: day(2) })).status).toBe(400);
+    expect((await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(60), departure: day(60) })).status).toBe(400);
+    expect((await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: '2026-02-30', departure: day(60) })).status).toBe(400);
+    expect((await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(12), departure: day(14) })).status).toBe(400);   // inside b1 (day 10 to 40)
+    await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(60), departure: day(62) });
+    expect((await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(61), departure: day(64) })).status).toBe(400);
+    expect(mine()).toHaveLength(1);
+    expect((await call('tok-U', 'requestBooking', { unitId: 'uA1', arrival: day(70), departure: day(72) })).status).toBe(403);   // email not verified
+  });
+  it('owners see only their own requests; the answer from staff shows; waiting ones can be cancelled by their owner only', async () => {
+    const id = (await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(80), departure: day(82) })).data.request.id;
+    expect((await call('tok-B', 'bookingRequests')).data.requests).toEqual([]);
+    expect((await call('tok-B', 'cancelBookingRequest', { id })).status).toBe(404);
+    P()[`ownerBookingRequests/${id}`].status = 'declined'; P()[`ownerBookingRequests/${id}`].declineReason = 'Unit under repair';
+    expect((await call('tok-A', 'bookingRequests')).data.requests[0]).toMatchObject({ status: 'declined', declineReason: 'Unit under repair' });
+    expect((await call('tok-A', 'cancelBookingRequest', { id })).status).toBe(400);
+    P()[`ownerBookingRequests/${id}`].status = 'pending';
+    expect((await call('tok-A', 'cancelBookingRequest', { id })).status).toBe(200);
+    expect((await call('tok-A', 'bookingRequests')).data.requests).toEqual([]);   // cancelled ones are not listed
+  });
+  it('at most 10 waiting at once', async () => {
+    for (let i = 0; i < 10; i++) expect((await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(100 + i * 3), departure: day(101 + i * 3) })).status).toBe(200);
+    expect((await call('tok-A', 'requestBooking', { unitId: 'uA1', arrival: day(200), departure: day(201) })).status).toBe(400);
   });
 });

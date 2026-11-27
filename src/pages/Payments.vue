@@ -16,8 +16,8 @@
           <div class="row" v-if="p.ref"><span>Bank reference</span><span>{{ p.ref }}</span></div>
         </div>
         <div class="payact">
-          <button v-if="p.hasPdf" class="btn small" :disabled="busy[p.id]" @click="statement(p)">{{ busy[p.id] === 'pdf' ? 'Preparing…' : 'Owner statement (PDF)' }}</button>
-          <button class="btn small secondary" :disabled="busy[p.id]" @click="slips(p)">{{ busy[p.id] === 'slip' ? 'Opening…' : 'Pay slip' }}</button>
+          <button v-if="p.hasPdf" class="btn small" :class="{ 'is-busy': busy[p.id] === 'pdf' }" :disabled="busy[p.id]" @click="statement(p)">{{ busy[p.id] === 'pdf' ? 'Preparing…' : 'Owner statement (PDF)' }}</button>
+          <button class="btn small secondary" :class="{ 'is-busy': busy[p.id] === 'slip' }" :disabled="busy[p.id]" @click="slips(p)">{{ busy[p.id] === 'slip' ? 'Opening…' : 'Pay slip' }}</button>
         </div>
         <div v-if="p.files" class="attach">
           <div v-if="!p.files.length" class="hint" style="margin:0">No pay slip file found.</div>
@@ -25,11 +25,11 @@
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12l-8.5 8.5a5 5 0 0 1-7-7L14 5a3.5 3.5 0 0 1 5 5l-8.5 8.5a2 2 0 0 1-3-3L15 7"/></svg><span>{{ f.name }}</span>
           </button>
         </div>
-        <div v-if="p.err" class="err">{{ p.err }}</div>
+        <div v-if="p.err" class="err pop">{{ p.err }}</div>
       </div></div>
     </template>
   </Loader>
-  <Viewer v-if="view" :items="view.items" :start="view.start" @close="view = null" />
+  <Transition name="sheet"><Viewer v-if="view" :items="view.items" :start="view.start" @close="view = null" /></Transition>
   </div>
 </template>
 <script>

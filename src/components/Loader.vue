@@ -6,8 +6,8 @@
       <div class="sk-row" v-for="r in rows" :key="r"><div class="sk sk-l"></div><div class="sk sk-r"></div></div>
     </div>
   </div>
-  <div v-else-if="error" class="err">{{ error }} <button class="link-btn" @click="$emit('retry')">Try again</button></div>
-  <slot v-else />
+  <div v-else-if="error" class="err pop">{{ error }} <button class="link-btn" @click="$emit('retry')">Try again</button></div>
+  <div v-else class="loaded"><slot /></div>
 </template>
 <script>
 // Skeleton placeholders while a page loads: `count` cards of `rows` lines each.

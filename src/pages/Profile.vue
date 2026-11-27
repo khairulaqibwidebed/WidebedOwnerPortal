@@ -20,30 +20,32 @@
       <ul class="rules" v-if="n1"><li v-for="r in rules" :key="r.id" :class="{ met: r.met }">{{ r.met ? '✓' : '○' }} {{ r.label }}</li></ul>
       <label for="n2">Confirm new password</label><PasswordInput id="n2" v-model="n2" autocomplete="new-password" placeholder="Re-enter your password" />
       <div v-if="mismatch" class="hint warn">The two new passwords are not the same yet.</div>
-      <div v-if="pwErr" class="err">{{ pwErr }}</div><div v-if="pwOk" class="ok pop">✓ Your password has been changed.</div>
-      <button class="btn block" :disabled="busy || !ready">{{ busy ? 'Saving…' : 'Change password' }}</button>
+      <div v-if="pwErr" class="err pop">{{ pwErr }}</div><div v-if="pwOk" class="ok pop">✓ Your password has been changed.</div>
+      <button class="btn block" :class="{ 'is-busy': busy }" :disabled="busy || !ready">{{ busy ? 'Saving…' : 'Change password' }}</button>
     </form>
-    <button class="btn ghost block press" @click="out">Sign out</button>
+    <button class="btn ghost block press" @click="ask = true">Sign out</button>
   </Loader>
+  <Transition name="sheet"><ConfirmDialog v-if="ask" title="Sign out?" text="You will need your email and password to sign in again." ok-label="Sign out" busy-label="Signing out…" :busy="leaving" @cancel="ask = false" @confirm="out" /></Transition>
   </div>
 </template>
 <script>
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, signOut } from 'firebase/auth';
 import Loader from '@/components/Loader.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
+import ConfirmDialog from '@/components/ConfirmDialog.vue';
 import { auth } from '@/firebase.js';
 import { call } from '@/lib/api.js';
 import { session } from '@/lib/session.js';
 import { friendlyAuthError, passwordProblem, PW_RULES, dmy } from '@/lib/format.js';
 export default {
-  components: { Loader, PasswordInput },
+  components: { Loader, PasswordInput, ConfirmDialog },
   computed: {
     accepted() { const a = session.terms?.acceptedAt; return a ? dmy(a.slice(0, 10)) : ''; },
     ready() { return !!(this.cur && this.n1 && this.n2) && !passwordProblem(this.n1); },
     rules() { return PW_RULES.map(r => ({ ...r, met: r.ok(this.n1) })); },
     mismatch() { return !!this.n2 && this.n1 !== this.n2; }
   },
-  data() { return { loading: true, error: '', profile: { name: '', email: '' }, cur: '', n1: '', n2: '', busy: false, pwErr: '', pwOk: false }; },
+  data() { return { loading: true, error: '', profile: { name: '', email: '' }, cur: '', n1: '', n2: '', busy: false, pwErr: '', pwOk: false, ask: false, leaving: false }; },
   mounted() { this.load(); },
   methods: {
     async load() { this.loading = true; this.error = ''; try { this.profile = (await call('overview')).profile; } catch (e) { this.error = e.message; } finally { this.loading = false; } },
@@ -61,7 +63,7 @@ export default {
       } catch (e) { this.pwErr = friendlyAuthError(e); }
       finally { this.busy = false; }
     },
-    async out() { session.terms = null; await signOut(auth); this.$router.replace('/login'); }
+    async out() { this.leaving = true; try { session.terms = null; await signOut(auth); this.ask = false; this.$router.replace('/login'); } finally { this.leaving = false; } }
   }
 };
 </script>

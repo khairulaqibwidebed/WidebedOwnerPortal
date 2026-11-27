@@ -10,8 +10,8 @@
       <ul class="rules" v-if="password"><li v-for="r in rules" :key="r.id" :class="{ met: r.met }">{{ r.met ? '✓' : '○' }} {{ r.label }}</li></ul><p class="hint" v-else>8 or more characters with a capital letter, a small letter, a number and a symbol.</p>
       <label for="pw2">Confirm password</label>
       <PasswordInput id="pw2" v-model="confirm" autocomplete="new-password" placeholder="Re-enter your password" />
-      <div v-if="error" class="err">{{ error }}</div>
-      <button class="btn block" :disabled="busy">{{ busy ? 'Creating…' : 'Create account' }}</button>
+      <div v-if="error" class="err pop">{{ error }}</div>
+      <button class="btn block" :class="{ 'is-busy': busy }" :disabled="busy">{{ busy ? 'Creating…' : 'Create account' }}</button>
     </form>
     <p class="center hint">Already have an account? <router-link to="/login">Sign in</router-link></p>
   </div>

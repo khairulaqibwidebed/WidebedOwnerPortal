@@ -5,7 +5,7 @@ It reads the PMS only through its server functions (`api/`), with a service acco
 
 ## What the owner can do
 - Register (only if their email is an owner or co-owner email in the PMS), verify the email, sign in, forgot password.
-- Property and Units (read only), Check-ins and check-outs (dates only), Payments (only PAID months: Owner Statement PDF, pay slip), Maintenance (status only, photos and videos), Profile (name, email, change password).
+- Property and Units (read only), Check-ins and check-outs (dates, nights and gross rental, no guest names), Payments (only PAID months: Owner Statement PDF, pay slip), Maintenance (status only, photos and videos), Profile (name, email, change password).
 - Installable on a phone (PWA).
 
 ## How it stays safe

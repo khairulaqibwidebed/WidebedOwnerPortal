@@ -10,27 +10,32 @@
     </div>
     <Loader :loading="loading" :error="error" :count="2" :rows="3" @retry="load">
       <div v-if="!units.length" class="empty">No units are linked to your account yet.</div>
-      <div class="grid stagger">
-        <router-link v-for="u in units" :key="u.id" :to="`/units/${u.id}`" class="card ucard clickable">
-          <div class="ucard-top">
-            <div class="u-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/></svg></div>
-            <div class="grow"><div class="unit-code">{{ u.code }}</div><div class="sub" style="margin:0">{{ u.property }}</div></div>
-            <span class="chip" :class="u.occupied ? 'green' : ''" v-if="u.occupied != null">{{ u.occupied ? 'Occupied' : 'Vacant' }}</span>
-            <span class="chev" aria-hidden="true">›</span>
+      <section v-for="g in groups" :key="g.key" class="pgroup">
+        <div class="pgroup-h">
+          <h2>{{ g.property }}<small>{{ g.units.length }} {{ g.units.length === 1 ? 'unit' : 'units' }}</small></h2>
+          <div class="addr" v-if="g.addr">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            <span>{{ g.addr }}</span>
           </div>
-          <div class="ucard-body">
-            <div class="addr" style="margin-top:0" v-if="addr(u)">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
-              <span class="clamp2">{{ addr(u) }}</span>
+        </div>
+        <div class="grid stagger units-grid">
+          <router-link v-for="u in g.units" :key="u.id" :to="`/units/${u.id}`" class="card ucard clickable">
+            <div class="ucard-top">
+              <div class="u-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-7h6v7"/></svg></div>
+              <div class="grow"><div class="unit-code">{{ u.code }}</div></div>
+              <span class="chip" :class="u.occupied ? 'green' : ''" v-if="u.occupied != null">{{ u.occupied ? 'Occupied' : 'Vacant' }}</span>
+              <span class="chev" aria-hidden="true">›</span>
             </div>
-            <div class="tiles" v-if="tiles(u).length"><div class="tile" v-for="t in tiles(u)" :key="t.label"><b>{{ t.value }}</b><span>{{ t.label }}</span></div></div>
-            <div class="kv" v-if="u.feePct != null || u.owner_since">
-              <div class="row" v-if="u.feePct != null"><span>Service fee</span><span>{{ pct(u.feePct) }}</span></div>
-              <div class="row" v-if="u.owner_since"><span>Your ownership from</span><span>{{ dmy(u.owner_since) }}</span></div>
+            <div class="ucard-body" v-if="tiles(u).length || u.feePct != null || u.owner_since">
+              <div class="tiles" v-if="tiles(u).length"><div class="tile" v-for="t in tiles(u)" :key="t.label"><b>{{ t.value }}</b><span>{{ t.label }}</span></div></div>
+              <div class="kv" v-if="u.feePct != null || u.owner_since">
+                <div class="row" v-if="u.feePct != null"><span>Service fee</span><span>{{ pct(u.feePct) }}</span></div>
+                <div class="row" v-if="u.owner_since"><span>Your ownership from</span><span>{{ dmy(u.owner_since) }}</span></div>
+              </div>
             </div>
-          </div>
-        </router-link>
-      </div>
+          </router-link>
+        </div>
+      </section>
     </Loader>
   </div>
 </template>
@@ -43,7 +48,13 @@ export default {
   data() { return { loading: true, error: '', units: [], profile: null, dmy, pct }; },
   computed: {
     greeting() { const n = (this.profile?.name || '').split(/\s+/)[0]; return n ? `Welcome, ${n}` : 'Welcome'; },
-    properties() { return new Set(this.units.map(u => u.property)).size; }
+    properties() { return new Set(this.units.map(u => u.property)).size; },
+    // One heading per property (name + address shown once), its units underneath
+    groups() {
+      const m = new Map();
+      for (const u of this.units) { const addr = this.addr(u), key = u.property + '|' + addr; if (!m.has(key)) m.set(key, { key, property: u.property, addr, units: [] }); m.get(key).units.push(u); }
+      return [...m.values()];
+    }
   },
   mounted() { this.load(); },
   methods: {

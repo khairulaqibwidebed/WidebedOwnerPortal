@@ -55,8 +55,11 @@ const val = v => {
 };
 const plainFields = f => Object.fromEntries(Object.entries(f || {}).map(([k, v]) => [k, val(v)]));
 export const plain = doc => ({ id: doc.name.split('/').pop(), ...plainFields(doc.fields) });
+// 27 Nov 2026: also Date (a real Firestore time), arrays and plain objects, for the owner booking request and its staff notification
 const enc = v => v == null ? { nullValue: null } : typeof v === 'string' ? { stringValue: v } : typeof v === 'boolean' ? { booleanValue: v }
-  : Number.isInteger(v) ? { integerValue: String(v) } : typeof v === 'number' ? { doubleValue: v } : { stringValue: String(v) };
+  : v instanceof Date ? { timestampValue: v.toISOString() } : Array.isArray(v) ? { arrayValue: { values: v.map(enc) } }
+  : Number.isInteger(v) ? { integerValue: String(v) } : typeof v === 'number' ? { doubleValue: v }
+  : typeof v === 'object' ? { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, enc(x)])) } } : { stringValue: String(v) };
 const root = key => `projects/${key.project_id}/databases/(default)/documents`;
 const base = key => `https://firestore.googleapis.com/v1/${root(key)}`;
 

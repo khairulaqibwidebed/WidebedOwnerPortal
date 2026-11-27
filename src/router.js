@@ -18,7 +18,12 @@ const routes = [
   { path: '/profile', component: () => import('@/pages/Profile.vue'), meta: { title: 'Profile' } },
   { path: '/:rest(.*)', redirect: '/' }
 ];
-const router = createRouter({ history: createWebHistory(), routes });
+// New page opens at the top (after the old page has faded out); Back returns to where you were. Tab changes inside a page keep the scroll.
+const scrollBehavior = (to, from, saved) => {
+  if (to.path === from.path) return false;
+  return new Promise(r => setTimeout(() => r(saved ? { ...saved, behavior: 'instant' } : { top: 0, behavior: 'instant' }), 110));
+};
+const router = createRouter({ history: createWebHistory(), routes, scrollBehavior });
 
 router.beforeEach(async to => {
   await whenReady;

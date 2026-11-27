@@ -7,16 +7,16 @@
         <input id="em" v-model.trim="email" type="email" autocomplete="username" inputmode="email" />
         <label for="pw">Password</label>
         <PasswordInput id="pw" v-model="password" autocomplete="current-password" placeholder="Enter your password" />
-        <div v-if="error" class="err">{{ error }}</div>
-        <button class="btn block" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</button>
+        <div v-if="error" class="err pop">{{ error }}</div>
+        <button class="btn block" :class="{ 'is-busy': busy }" :disabled="busy">{{ busy ? 'Signing in…' : 'Sign in' }}</button>
         <p class="hint center"><button type="button" class="link-btn" @click="forgot = true; error = ''">Forgot password?</button></p>
       </template>
       <template v-else>
         <label for="em2">Your email</label>
         <input id="em2" v-model.trim="email" type="email" autocomplete="username" inputmode="email" />
-        <div v-if="error" class="err">{{ error }}</div>
+        <div v-if="error" class="err pop">{{ error }}</div>
         <div v-if="sent" class="ok">If this email has an account, a link to choose a new password is on its way.</div>
-        <button class="btn block" :disabled="busy">{{ busy ? 'Sending…' : 'Send reset link' }}</button>
+        <button class="btn block" :class="{ 'is-busy': busy }" :disabled="busy">{{ busy ? 'Sending…' : 'Send reset link' }}</button>
         <p class="hint center"><button type="button" class="link-btn" @click="forgot = false; sent = false; error = ''">Back to sign in</button></p>
       </template>
     </form>

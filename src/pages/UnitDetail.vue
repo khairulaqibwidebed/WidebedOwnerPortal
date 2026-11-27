@@ -13,8 +13,9 @@
         <div class="seg tabs4" style="--n:4" :style="{ '--i': tabs.findIndex(t => t.id === tab) }">
           <button v-for="t in tabs" :key="t.id" :class="{ on: tab === t.id }" @click="go(t.id)">{{ t.label }}</button>
         </div>
-        <div class="pane" :key="tab">
-        <div v-if="tab === 'details'" class="card">
+        <SwipeTabs :model-value="tab" :ids="tabs.map(t => t.id)" @update:model-value="go">
+          <template #details>
+            <div class="card">
           <div class="addr" style="margin-top:0" v-if="addr"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 0 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>{{ addr }}</span></div>
           <div class="tiles" v-if="tiles.length"><div class="tile" v-for="t in tiles" :key="t.label"><b>{{ t.value }}</b><span>{{ t.label }}</span></div></div>
           <div class="kv">
@@ -25,10 +26,11 @@
             <div class="row" v-if="unit.owner_since"><span>Your ownership from</span><span>{{ dmy(unit.owner_since) }}</span></div>
           </div>
         </div>
-        <Stays v-else-if="tab === 'stays'" :unit-id="unit.id" />
-        <Payments v-else-if="tab === 'payments'" :unit-id="unit.id" />
-        <Maintenance v-else-if="tab === 'maintenance'" :unit-id="unit.id" />
-        </div>
+          </template>
+          <template #stays><Stays :unit-id="unit.id" /></template>
+          <template #payments><Payments :unit-id="unit.id" /></template>
+          <template #maintenance><Maintenance :unit-id="unit.id" /></template>
+        </SwipeTabs>
       </template>
     </Loader>
   </div>
@@ -39,9 +41,10 @@ import Stays from '@/pages/Stays.vue';
 import Payments from '@/pages/Payments.vue';
 import Maintenance from '@/pages/Maintenance.vue';
 import { call } from '@/lib/api.js';
+import SwipeTabs from '@/components/SwipeTabs.vue';
 import { dmy, pct, cleanAddress } from '@/lib/format.js';
 export default {
-  components: { Loader, Stays, Payments, Maintenance },
+  components: { SwipeTabs, Loader, Stays, Payments, Maintenance },
   data() { return { loading: true, error: '', unit: null, dmy, pct,
     tabs: [{ id: 'details', label: 'Details' }, { id: 'stays', label: 'Check-ins' }, { id: 'payments', label: 'Payments' }, { id: 'maintenance', label: 'Repairs' }] }; },
   computed: {
